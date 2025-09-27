@@ -1,4 +1,27 @@
-.idea
-/.env
-/.junie
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.env
+.venv/
+venv/
+.idea/
+.vscode/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Byte-compiled / optimized / DLL files
+*.so
+
+# OS
+.DS_Store
+Thumbs.db
+
 tmp
+.junie
