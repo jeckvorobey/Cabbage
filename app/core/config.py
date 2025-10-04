@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from pydantic import BaseModel
+from typing import Literal
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -29,6 +30,16 @@ class Settings(BaseSettings):
 
     # Telegram
     telegram_bot_token: str | None = None
+    telegram_mode: Literal["polling", "webhook"] = "polling"
+    telegram_webhook_host: str | None = None  # e.g. https://example.com
+    telegram_webhook_path: str = "/telegram/webhook"
+    telegram_webhook_secret: str | None = None
+
+    @property
+    def telegram_webhook_url(self) -> str | None:
+        if self.telegram_webhook_host:
+            return f"{self.telegram_webhook_host}{self.telegram_webhook_path}"
+        return None
 
     # YooKassa
     yookassa: YooKassaSettings = YooKassaSettings(
