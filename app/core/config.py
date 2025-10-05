@@ -21,9 +21,13 @@ class Settings(BaseSettings):
     """Глобальные настройки приложения."""
 
     # Общие
-    app_host: str = "127.0.0.1"
+    app_host: str = "0.0.0.0"
     app_port: int = 8000
     app_env: str = "dev"
+
+    # Логирование
+    log_dir: str = "./logs"
+    log_level: str = "INFO"
 
     # База данных
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/cabbage"

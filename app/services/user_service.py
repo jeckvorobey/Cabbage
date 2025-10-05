@@ -1,12 +1,16 @@
 """Сервис работы с пользователями и их адресами."""
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import Address, User
 from app.repositories.user_repository import UserRepository
 from app.schemas.address import AddressCreate, AddressOut, AddressUpdate
+
+logger = logging.getLogger(__name__)
 
 
 class UserService:
@@ -30,10 +34,11 @@ class UserService:
     ) -> User:
         """Найти пользователя по Telegram ID или создать нового покупателя.
 
-        Если пользователь существует, обновляет его поля новыми значениями (��сли они переданы).
+        Если пользователь существует, обновляет его поля новыми значениями (если они переданы).
         """
         user = await self.users.get_by_telegram_id(telegram_id)
         if user:
+            logger.debug(f"Пользователь {telegram_id} найден, обновление данных")
             # Обновление только переданных значений
             if name is not None:
                 user.name = name
@@ -53,6 +58,7 @@ class UserService:
             await self.session.commit()
             return user
 
+        logger.info(f"Создание нового пользователя: telegram_id={telegram_id}")
         user = await self.users.create(
             telegram_id=telegram_id,
             name=name,
@@ -64,10 +70,12 @@ class UserService:
             is_premium=bool(is_premium) if is_premium is not None else False,
         )
         await self.session.commit()
+        logger.info(f"Пользователь создан: id={user.id}, telegram_id={telegram_id}")
         return user
 
     # ===== Адреса пользователя =====
     async def list_addresses(self, *, user_id: int) -> list[AddressOut]:
+        logger.debug(f"Получение списка адресов для user_id={user_id}")
         res = await self.session.execute(select(Address).where(Address.user_id == user_id).order_by(Address.id))
         rows = res.scalars().all()
         return [AddressOut.model_validate(row) for row in rows]
@@ -78,18 +86,22 @@ class UserService:
         )
 
     async def create_address(self, *, user_id: int, data: AddressCreate) -> AddressOut:
+        logger.info(f"Создание адреса для user_id={user_id}")
         if data.is_default:
             await self._unset_default_for_user(user_id)
         addr = Address(user_id=user_id, address_line=data.address_line, comment=data.comment, is_default=data.is_default)
         self.session.add(addr)
         await self.session.flush()
         await self.session.commit()
+        logger.info(f"Адрес создан: id={addr.id}, user_id={user_id}")
         return AddressOut.model_validate(addr)
 
     async def update_address(self, *, user_id: int, address_id: int, data: AddressUpdate) -> AddressOut:
+        logger.debug(f"Обновление адреса {address_id} для user_id={user_id}")
         res = await self.session.execute(select(Address).where(Address.id == address_id, Address.user_id == user_id))
         addr = res.scalar_one_or_none()
         if not addr:
+            logger.warning(f"Адрес {address_id} не найден для user_id={user_id}")
             raise ValueError("Адрес не найден")
         if data.is_default is True:
             await self._unset_default_for_user(user_id)
@@ -101,10 +113,13 @@ class UserService:
             addr.is_default = data.is_default
         await self.session.flush()
         await self.session.commit()
+        logger.info(f"Адрес {address_id} обновлён для user_id={user_id}")
         return AddressOut.model_validate(addr)
 
     async def delete_address(self, *, user_id: int, address_id: int) -> None:
+        logger.info(f"Удаление адреса {address_id} для user_id={user_id}")
         await self.session.execute(
             delete(Address).where(Address.id == address_id, Address.user_id == user_id)
         )
         await self.session.commit()
+        logger.info(f"Адрес {address_id} удалён")

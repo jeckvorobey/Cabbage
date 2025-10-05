@@ -5,27 +5,36 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 
+# Настройка логирования перед импортом settings
+from app.core.logging import setup_logging
+setup_logging()
+
 from app.core.config import settings
 from app.telegram.handlers.start import router as start_router
 
-"""
-Асинхронно запускает Telegram-бота.
+logger = logging.getLogger(__name__)
 
-Инициализирует бота с токеном из настроек, настраивает диспетчер,
-подключает роутер start_router и начинает опрос обновлений (polling).
-Если TELEGRAM_BOT_TOKEN не задан в окружении, выбрасывает RuntimeError.
 
-Исключения:
-    RuntimeError: Если TELEGRAM_BOT_TOKEN не задан в окружении.
-"""
 async def main() -> None:
+    """Асинхронно запускает Telegram-бота.
+
+    Инициализирует бота с токеном из настроек, настраивает диспетчер,
+    подключает роутер start_router и начинает опрос обновлений (polling).
+    Если TELEGRAM_BOT_TOKEN не задан в окружении, выбрасывает RuntimeError.
+
+    Исключения:
+        RuntimeError: Если TELEGRAM_BOT_TOKEN не задан в окружении.
+    """
     if not settings.telegram_bot_token:
+        logger.error("TELEGRAM_BOT_TOKEN не задан в окружении")
         raise RuntimeError("TELEGRAM_BOT_TOKEN не задан в окружении")
 
+    logger.info("Инициализация бота...")
     bot = Bot(
         settings.telegram_bot_token,
         default=DefaultBotProperties(parse_mode="HTML")
@@ -34,7 +43,9 @@ async def main() -> None:
 
     # Роуты бота
     dp.include_router(start_router)
+    logger.info("Роутеры подключены")
 
+    logger.info("Запуск polling...")
     await dp.start_polling(bot)
 
 

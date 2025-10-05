@@ -6,9 +6,12 @@
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 try:
     from yookassa import Configuration, Payment
@@ -26,16 +29,24 @@ class YooKassaService:
         if Configuration and self.shop_id and self.secret_key:
             Configuration.account_id = self.shop_id
             Configuration.secret_key = self.secret_key
+            logger.info("ЮKassa настроена")
+        else:
+            logger.warning("ЮKassa не настроена (отсутствуют shop_id/secret_key)")
 
     async def create_payment(self, *, amount: float, description: str, return_url: str | None = None) -> dict[str, Any]:
         """Создать платёж и вернуть данные подтверждения.
 
         Возвращает структуру с полем confirmation_url. При отсутствии конфигурации — заглушку.
         """
+        logger.info(f"Создание платежа: amount={amount}, description={description}")
+        
         if Payment and self.shop_id and self.secret_key:
             # Здесь мог бы быть реальный вызов SDK (синхронный), обёрнутый в executor
             # Но для простоты текущего этапа вернём заглушку
-            pass
+            logger.debug("Используется заглушка платежа (реальный SDK не вызывается)")
+        else:
+            logger.warning("Создание mock-платежа (ЮKassa не настроена)")
+        
         return {
             "id": "mock_payment_id",
             "amount": amount,

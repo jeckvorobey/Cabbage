@@ -23,6 +23,11 @@ alembic/versions/__pycache__/
 .DS_Store
 Thumbs.db
 
-tmp
-.junie
+# Logs
+logs/
+*.log
+
+# Temp
+tmp/
+.junie/
 .env/
