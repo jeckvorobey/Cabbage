@@ -31,3 +31,5 @@ logs/
 tmp/
 .junie/
 .env/
+
+app/telegram/user_data

@@ -36,30 +36,30 @@ async def cmd_start(message: Message) -> None:
     logger.info(f"Команда /start от пользователя {tg_id} (@{username})")
 
     # Сохраняем JSON объект пользователя в файл
-    try:
-        import json
-        from pathlib import Path
-
-        dump_dir = Path(__file__).parent.parent / "user_data"
-        dump_dir.mkdir(parents=True, exist_ok=True)
-        user_json_path = dump_dir / f"{tg_id}.json"
-
-        # aiogram v3: у объекта User есть метод model_dump()
-        user_payload = tg_user.model_dump() if hasattr(tg_user, "model_dump") else {
-            "id": tg_id,
-            "full_name": full_name,
-            "username": username,
-            "first_name": first_name,
-            "last_name": last_name,
-            "is_bot": is_bot,
-            "language_code": language_code,
-            "is_premium": is_premium,
-        }
-        user_json_path.write_text(json.dumps(user_payload, ensure_ascii=False, indent=2), encoding="utf-8")
-        logger.debug(f"Данные пользователя {tg_id} сохранены в {user_json_path}")
-    except Exception as e:
-        # Не падаем на ошибке записи файла
-        logger.error(f"Не удалось сохранить JSON пользователя {tg_id}: {e}", exc_info=True)
+    # try:
+    #     import json
+    #     from pathlib import Path
+    #
+    #     dump_dir = Path(__file__).parent.parent / "user_data"
+    #     dump_dir.mkdir(parents=True, exist_ok=True)
+    #     user_json_path = dump_dir / f"{tg_id}.json"
+    #
+    #     # aiogram v3: у объекта User есть метод model_dump()
+    #     user_payload = tg_user.model_dump() if hasattr(tg_user, "model_dump") else {
+    #         "id": tg_id,
+    #         "full_name": full_name,
+    #         "username": username,
+    #         "first_name": first_name,
+    #         "last_name": last_name,
+    #         "is_bot": is_bot,
+    #         "language_code": language_code,
+    #         "is_premium": is_premium,
+    #     }
+    #     user_json_path.write_text(json.dumps(user_payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    #     logger.debug(f"Данные пользователя {tg_id} сохранены в {user_json_path}")
+    # except Exception as e:
+    #     # Не падаем на ошибке записи файла
+    #     logger.error(f"Не удалось сохранить JSON пользователя {tg_id}: {e}", exc_info=True)
 
     # Регистрируем/обновляем пользователя в нашей БД
     try:

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-ьштшimport logging
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
