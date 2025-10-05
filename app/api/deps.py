@@ -1,12 +1,20 @@
-"""Зависимости FastAPI: получение сессии БД и текущего пользователя по Telegram ID."""
+"""Зависимости FastAPI: получение сессии БД и текущего пользователя.
+
+Поддерживаются два режима авторизации:
+- Основной: JWT (Authorization: Bearer), выдаётся через /tg/webapp/auth после валидации initData Mini App.
+- Dev-fallback: заголовок X-Telegram-Id допускается только в окружении dev.
+"""
 from __future__ import annotations
 
 from fastapi import Depends, Header, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+import jwt
 
 from app.core.db import get_session
 from app.schemas.user import UserMe
 from app.services.user_service import UserService
+from app.core.config import settings
 
 
 async def get_db_session() -> AsyncSession:
@@ -17,16 +25,31 @@ async def get_db_session() -> AsyncSession:
 
 
 async def get_current_user(
+    creds: HTTPAuthorizationCredentials | None = Depends(HTTPBearer(auto_error=False)),
     x_telegram_id: int | None = Header(default=None, alias="X-Telegram-Id"),
     session: AsyncSession = Depends(get_db_session),
 ) -> UserMe:
-    """Получить (или создать) пользователя по заголовку X-Telegram-Id.
+    """Получить текущего пользователя.
 
-    Для прототипа имя не требуется — при первом обращении создаём пользователя‑покупателя.
+    Приоритет: Bearer JWT → dev fallback X-Telegram-Id.
     """
-    if x_telegram_id is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Требуется X-Telegram-Id")
-
     user_service = UserService(session)
-    user = await user_service.get_or_create_by_telegram(telegram_id=x_telegram_id)
-    return UserMe(id=user.id, telegram_id=user.telegram_id, role=user.role)  # type: ignore[arg-type]
+
+    # 1) Bearer JWT
+    if creds is not None:
+        token = creds.credentials
+        try:
+            payload = jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+            user_id = int(payload.get("sub"))  # noqa: F841
+            telegram_id = int(payload.get("tgid"))
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Недействительный токен")
+        user = await user_service.get_or_create_by_telegram(telegram_id=telegram_id)
+        return UserMe(id=user.id, telegram_id=user.telegram_id, role=user.role)  # type: ignore[arg-type]
+
+    # 2) Dev fallback (устаревший путь)
+    if settings.app_env == "dev" and x_telegram_id is not None:
+        user = await user_service.get_or_create_by_telegram(telegram_id=x_telegram_id)
+        return UserMe(id=user.id, telegram_id=user.telegram_id, role=user.role)  # type: ignore[arg-type]
+
+    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Требуется авторизация")

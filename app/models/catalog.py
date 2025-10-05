@@ -46,7 +46,7 @@ class Product(Base):
     unit_id: Mapped[int] = mapped_column(ForeignKey("units.id"))
     image_url: Mapped[str | None] = mapped_column(String(500), default=None)
     description: Mapped[str | None] = mapped_column(Text, default=None)
-    stock_quantity: Mapped[float] = mapped_column(Numeric(12, 3), default=0)
+    qty: Mapped[int] = mapped_column(Integer, default=0)
 
     category: Mapped[Category] = relationship(back_populates="products")
     unit: Mapped[Unit] = relationship(back_populates="products")

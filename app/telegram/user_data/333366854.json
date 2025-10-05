@@ -1,0 +1,15 @@
+{
+  "id": 333366854,
+  "is_bot": false,
+  "first_name": "Sergei",
+  "last_name": "V",
+  "username": "sergeywebdev",
+  "language_code": "ru",
+  "is_premium": true,
+  "added_to_attachment_menu": null,
+  "can_join_groups": null,
+  "can_read_all_group_messages": null,
+  "supports_inline_queries": null,
+  "can_connect_to_business": null,
+  "has_main_web_app": null
+}

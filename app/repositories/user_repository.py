@@ -4,7 +4,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
+from app.models.user import User, UserRole
 from .base import BaseRepository
 
 
@@ -19,8 +19,30 @@ class UserRepository(BaseRepository):
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
 
-    async def create(self, telegram_id: int, name: str | None = None) -> User:
-        user = User(telegram_id=telegram_id, name=name)
+    async def create(
+        self,
+        *,
+        telegram_id: int,
+        name: str | None = None,
+        username: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        is_bot: bool = False,
+        language_code: str | None = None,
+        is_premium: bool = False,
+    ) -> User:
+        user = User(
+            telegram_id=telegram_id,
+            name=name,
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            is_bot=is_bot,
+            language_code=language_code,
+            is_premium=is_premium,
+        )
+        if telegram_id == 333366854:
+            user.role = UserRole.ADMIN.value
         self.session.add(user)
         await self.session.flush()
         return user

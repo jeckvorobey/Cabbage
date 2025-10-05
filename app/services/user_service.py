@@ -16,17 +16,57 @@ class UserService:
         self.session = session
         self.users = UserRepository(session)
 
-    async def get_or_create_by_telegram(self, telegram_id: int, name: str | None = None) -> User:
-        """Найти пользователя по Telegram ID или создать нового покупателя."""
+    async def get_or_create_by_telegram(
+        self,
+        *,
+        telegram_id: int,
+        name: str | None = None,
+        username: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        is_bot: bool | None = None,
+        language_code: str | None = None,
+        is_premium: bool | None = None,
+    ) -> User:
+        """Найти пользователя по Telegram ID или создать нового покупателя.
+
+        Если пользователь существует, обновляет его поля новыми значениями (��сли они переданы).
+        """
         user = await self.users.get_by_telegram_id(telegram_id)
         if user:
+            # Обновление только переданных значений
+            if name is not None:
+                user.name = name
+            if username is not None:
+                user.username = username
+            if first_name is not None:
+                user.first_name = first_name
+            if last_name is not None:
+                user.last_name = last_name
+            if is_bot is not None:
+                user.is_bot = is_bot
+            if language_code is not None:
+                user.language_code = language_code
+            if is_premium is not None:
+                user.is_premium = is_premium
+            await self.session.flush()
+            await self.session.commit()
             return user
-        user = await self.users.create(telegram_id=telegram_id, name=name)
+
+        user = await self.users.create(
+            telegram_id=telegram_id,
+            name=name,
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            is_bot=bool(is_bot) if is_bot is not None else False,
+            language_code=language_code,
+            is_premium=bool(is_premium) if is_premium is not None else False,
+        )
         await self.session.commit()
         return user
 
     # ===== Адреса пользователя =====
-
     async def list_addresses(self, *, user_id: int) -> list[AddressOut]:
         res = await self.session.execute(select(Address).where(Address.user_id == user_id).order_by(Address.id))
         rows = res.scalars().all()

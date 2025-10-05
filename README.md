@@ -3,15 +3,20 @@
 Коротко: асинхронный бэкенд на FastAPI с PostgreSQL (SQLAlchemy 2.0, Alembic), Telegram‑бот на aiogram 3, заготовка интеграции ЮKassa. Архитектура слоями: API → services → repositories → models. Готово к запуску локально и через Docker Compose.
 
 - API: товары, заказы, платёжные хуки; Swagger: /docs
-- Бот: регистрация пользователя по /start, хранение Telegram ID
+- Бот: регистрация пользователя по /start, хранение Telegram ID, кнопка открытия Mini App
 - БД: PostgreSQL (asyncpg), миграции через Alembic
 - Платежи: заглушка ЮKassa (create + webhook)
 
+## Что нового
+- Безопасная авторизация Mini App через валидацию initData и выдачу JWT (`POST /tg/webapp/auth`).
+- Переход API на Bearer JWT (с dev‑fallback по `X-Telegram-Id`).
+- Режимы бота: dev — polling; prod/Docker — webhook с проверкой секрета.
+
 ## Структура
 - app/
-  - main.py — точка входа FastAPI
-  - api/routers — health, products, orders, payments
-  - api/deps.py — зависимости (сессия БД, текущий пользователь по X‑Telegram‑Id)
+  - main.py — точка входа FastAPI (поднимает aiogram в polling/webhook)
+  - api/routers — health, products, orders, payments, addresses, tg_auth
+  - api/deps.py — зависимости (JWT авторизация, dev‑fallback)
   - core/ — конфиг (Pydantic Settings), БД (Async engine)
   - models/ — ORM‑модели: user, catalog, order
   - repositories/ — SQL‑доступ
@@ -38,10 +43,17 @@
 
 Пример из .env.example использует плоские имена (YOOKASSA_SHOP_ID и т.д.). Замените их на вариант с двойным подчёркиванием (см. выше).
 
+## Новые переменные окружения
+- FRONTEND_WEBAPP_URL — URL вашего Mini App (отправляется в кнопке /start)
+- JWT_SECRET — секрет для подписания JWT
+- JWT_ALGORITHM — алгоритм (HS256)
+- JWT_TTL_SECONDS — срок жизни токена (сек.)
+- WEBAPP_AUTH_TTL_SECONDS — TTL initData (сек.)
+
 ## Быстрый старт в Docker (рекомендуется)
 1) Подготовьте .env
 - cp .env.example .env
-- Заполните TELEGRAM_BOT_TOKEN
+- Заполните TELEGRAM_BOT_TOKEN, FRONTEND_WEBAPP_URL, JWT_SECRET
 - Убедитесь, что DATABASE_URL указывает на db из compose: `postgresql+asyncpg://postgres:postgres@db:5432/cabbage`
 - Для ЮKassa при необходимости задайте YOOKASSA__*
 
@@ -72,7 +84,7 @@
 
 2) База данных
 - Запустите PostgreSQL локально или поднимите только БД из compose: `docker compose up -d db`
-- В .env укажите DATABASE_URL, например: `postgresql+asyncpg://postgres:postgres@localhost:5432/cabbage` (если у вас локальный Postgres). Если БД из compose: `@localhost:5432` тоже подойдёт при пробросе порта.
+- В .env укажите DATABASE_URL, например: `postgresql+asyncpg://postgres:postgres@localhost:5432/cabbage`
 
 3) Миграции
 - mkdir -p alembic/versions
@@ -85,34 +97,31 @@
 5) Запуск бота
 - uv run -m app.telegram.run_bot
 
-## Коротко об API
-- GET / — {app:"cabbage", status:"ok"}
-- GET /health/ping — пинг
-- GET /products — список товаров с актуальной ценой
-- POST /orders — создание заказа (нужен заголовок X-Telegram-Id)
-- POST /payments/yookassa/callback — webhook ЮKassa (заглушка)
-- POST /payments/yookassa/create — пример создания платежа (заглушка)
+## Авторизация Mini App
+1) Клиент: в Mini App используйте `window.Telegram.WebApp.initData` (raw строка) и отправьте её на бэкенд:
+```ts
+const initData = window.Telegram.WebApp.initData;
+const resp = await fetch("/tg/webapp/auth", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ init_data: initData }),
+});
+const { token } = await resp.json();
+// Сохраните token и добавляйте в Authorization: Bearer <token>
+```
 
-Документация Swagger: /docs
+2) Бэкенд: `/tg/webapp/auth` валидирует initData как описано в доках Telegram (HMAC_SHA256("WebAppData", bot_token), TTL по auth_date), создаёт/обновляет пользователя и выдаёт JWT.
+
+3) Защищённые эндпоинты: передавайте `Authorization: Bearer <jwt>`. В dev допускается `X-Telegram-Id` как fallback.
+
+Документация:
+- Aiogram v3: https://docs.aiogram.dev
+- WebApp авторизация: https://core.telegram.org/bots/webapps#validating-data-received-via-the-web-app
+- setWebhook: https://core.telegram.org/bots/api#setwebhook
+
+## Режимы бота
+- Dev (polling): `TELEGRAM_MODE=polling` — бот стартует фоном внутри FastAPI (lifespan) или отдельным модулем `app/telegram/run_bot.py`.
+- Prod (webhook): `TELEGRAM_MODE=webhook`, обязателен публичный HTTPS. Бэкенд выставляет вебхук на `{TELEGRAM_WEBHOOK_HOST}{TELEGRAM_WEBHOOK_PATH}` и проверяет заголовок `X-Telegram-Bot-Api-Secret-Token`.
 
 ## Тесты
 - uv run pytest
-
-## Продакшен‑развёртывание
-Вариант на Docker Compose:
-- Подготовьте .env c production‑значениями (реальная БД, TELEGRAM_BOT_TOKEN, YOOKASSA__*)
-- Соберите образы: `docker compose build`
-- Примените миграции: `docker compose run --rm backend uv run alembic upgrade head`
-- Запустите сервисы: `docker compose up -d backend telegram-bot`
-- Разместите reverse‑proxy (например, Nginx) перед backend:8000, включите HTTPS
-- В личном кабинете ЮKassa настройте webhook на https://<ваш-домен>/payments/yookassa/callback и задайте return_url
-
-Примечания по производительности:
-- По умолчанию используется uvicorn. Для высокой нагрузки можно использовать gunicorn с воркерами uvicorn (не входит в текущий Dockerfile).
-- Настройте лимиты ресурсов контейнеров и мониторинг.
-
-## Полезные детали реализации
-- Настройки: app/core/config.py (Pydantic Settings), .env читается автоматически
-- Alembic использует settings.database_url (приоритетнее alembic.ini)
-- Пользователь определяется по Telegram ID (X‑Telegram‑Id в API и /start в боте)
-- Репозитории и сервисы изолируют бизнес‑логику от HTTP-слоя

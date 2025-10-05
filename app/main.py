@@ -19,6 +19,7 @@ from app.api.routers import orders as orders_router
 from app.api.routers import products as products_router
 from app.api.routers import payments as payments_router
 from app.api.routers import addresses as addresses_router
+from app.api.routers import tg_auth as tg_auth_router
 from app.core.config import settings
 from app.telegram.handlers.start import router as start_router
 
@@ -88,6 +89,7 @@ app.include_router(products_router.router)
 app.include_router(orders_router.router)
 app.include_router(payments_router.router)
 app.include_router(addresses_router.router)
+app.include_router(tg_auth_router.router)
 
 
 @app.get("/")

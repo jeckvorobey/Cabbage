@@ -12,7 +12,16 @@ from aiogram.client.default import DefaultBotProperties
 from app.core.config import settings
 from app.telegram.handlers.start import router as start_router
 
+"""
+Асинхронно запускает Telegram-бота.
 
+Инициализирует бота с токеном из настроек, настраивает диспетчер,
+подключает роутер start_router и начинает опрос обновлений (polling).
+Если TELEGRAM_BOT_TOKEN не задан в окружении, выбрасывает RuntimeError.
+
+Исключения:
+    RuntimeError: Если TELEGRAM_BOT_TOKEN не задан в окружении.
+"""
 async def main() -> None:
     if not settings.telegram_bot_token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN не задан в окружении")

@@ -13,7 +13,7 @@ class ProductOut(BaseModel):
     unit_symbol: str = Field(description="Краткое обозначение единицы (например, кг, шт)")
     price: float
     old_price: float | None = None
-    stock_quantity: float
+    qty: int
 
     class Config:
         from_attributes = True

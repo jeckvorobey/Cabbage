@@ -41,6 +41,17 @@ class Settings(BaseSettings):
             return f"{self.telegram_webhook_host}{self.telegram_webhook_path}"
         return None
 
+    # Mini App / Frontend
+    frontend_webapp_url: str | None = None
+
+    # JWT
+    jwt_secret: str | None = None
+    jwt_algorithm: str = "HS256"
+    jwt_ttl_seconds: int = 3600
+
+    # Авторизация WebApp initData
+    webapp_auth_ttl_seconds: int = 600
+
     # YooKassa
     yookassa: YooKassaSettings = YooKassaSettings(
         shop_id=None,
