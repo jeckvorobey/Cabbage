@@ -1,16 +1,18 @@
 """Репозиторий товаров и цен."""
 from __future__ import annotations
 
+from datetime import datetime
+
 from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.models.catalog import Price, Product, Unit
+from app.models.catalog import Price, Product, Unit, Category
 from .base import BaseRepository
 
 
 class ProductRepository(BaseRepository):
-    """Запросы каталога с актуальными ценами."""
+    """Запросы каталога с актуальными ценами и CRUD-операции."""
 
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session)
@@ -27,7 +29,7 @@ class ProductRepository(BaseRepository):
                 u.symbol.label("unit_symbol"),
                 pr.price.label("price"),
                 pr.old_price.label("old_price"),
-                p.stock_quantity,
+                p.qty,
             )
             .join(pr, pr.product_id == p.id)
             .join(u, u.id == p.unit_id)
@@ -54,3 +56,59 @@ class ProductRepository(BaseRepository):
         )
         res = await self.session.execute(stmt)
         return res.scalar_one_or_none()
+
+    # --- CRUD продуктов ---
+    async def create(self, data: dict) -> Product:
+        # Проверки связей
+        if not (await self.session.execute(select(Category).where(Category.id == data["category_id"]))).scalar_one_or_none():
+            raise ValueError("Категория не найдена")
+        if not (await self.session.execute(select(Unit).where(Unit.id == data["unit_id"]))).scalar_one_or_none():
+            raise ValueError("Единица измерения не найдена")
+        p = Product(**data)
+        self.session.add(p)
+        await self.session.flush()
+        return p
+
+    async def update(self, product: Product, data: dict) -> Product:
+        if "category_id" in data:
+            if not (await self.session.execute(select(Category).where(Category.id == data["category_id"]))).scalar_one_or_none():
+                raise ValueError("Категория не найдена")
+        if "unit_id" in data:
+            if not (await self.session.execute(select(Unit).where(Unit.id == data["unit_id"]))).scalar_one_or_none():
+                raise ValueError("Единица измерения не найдена")
+        for k, v in data.items():
+            setattr(product, k, v)
+        await self.session.flush()
+        return product
+
+    async def delete(self, product: Product) -> None:
+        await self.session.delete(product)
+        await self.session.flush()
+
+    # --- Управление ценой ---
+    async def set_current_price(self, product_id: int, new_price: float) -> Price:
+        # проверить товар
+        prod = (await self.session.execute(select(Product).where(Product.id == product_id))).scalar_one_or_none()
+        if not prod:
+            raise ValueError("Товар не найден")
+        # деактивировать текущую
+        current = (await self.session.execute(
+            select(Price).where(Price.product_id == product_id, Price.is_current.is_(True))
+        )).scalar_one_or_none()
+
+        old_price_value = None
+        if current:
+            current.is_current = False
+            current.end_date = datetime.utcnow()
+            old_price_value = float(current.price)
+
+        price = Price(
+            product_id=product_id,
+            price=new_price,
+            is_current=True,
+            start_date=datetime.utcnow(),
+            old_price=old_price_value,
+        )
+        self.session.add(price)
+        await self.session.flush()
+        return price

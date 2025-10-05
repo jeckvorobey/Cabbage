@@ -22,10 +22,10 @@ logger = logging.getLogger(__name__)
 
 
 async def get_db_session() -> AsyncSession:
-    """Асинхронная сессия БД."""
+    """Асинхронна�� сессия БД."""
     async for s in get_session():
         return s
-    raise RuntimeError("Не удалось получить сессию Б��")
+    raise RuntimeError("Не удалось получить сессию БД")
 
 
 async def get_current_user(
@@ -61,3 +61,21 @@ async def get_current_user(
 
     logger.warning("Попытка доступа без авторизации")
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Требуется авторизация")
+
+
+def require_role_at_most(max_role: "UserRole"):
+    """Проверка роли: пускает, если роль пользователя <= max_role (ADMIN=1 < MANAGER=2 < CUSTOMER=9).
+
+    Пример: Depends(require_role_at_most(UserRole.MANAGER)) — допускает ADMIN и MANAGER,
+    но отклоняет CUSTOMER.
+    """
+    from app.schemas.user import UserMe  # локальные импорты, чтобы избежать циклов
+    from app.models.user import UserRole
+    from fastapi import Depends, HTTPException, status
+
+    async def _dep(user: UserMe = Depends(get_current_user)) -> UserMe:
+        if int(user.role) > int(max_role):
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Недостаточно прав")
+        return user
+
+    return _dep

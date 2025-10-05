@@ -32,4 +32,4 @@ tmp/
 .junie/
 .env/
 
-app/telegram/user_data
+app/telegram/user_data/

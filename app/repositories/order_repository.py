@@ -23,7 +23,7 @@ class OrderRepository(BaseRepository):
         self,
         *,
         user_id: int,
-        items: list[tuple[int, float]],  # (product_id, quantity)
+        items: list[tuple[int, int]],  # (product_id, quantity в граммах)
         delivery_type: str,
         address_id: int | None,
         payment_method: str | None,
@@ -31,6 +31,7 @@ class OrderRepository(BaseRepository):
         """Создать заказ с позициями и зарезервировать остатки.
 
         Бросает ValueError, если не хватает остатков или нет актуальной цены.
+        Количество трактуется как целое число граммов.
         """
         # Проверки и расчёт суммы
         total = Decimal("0.00")
@@ -46,11 +47,11 @@ class OrderRepository(BaseRepository):
                     raise ValueError(f"Товар id={product_id} не найден")
                 product_cache[product_id] = prod
 
-            # Проверяем остаток
-            if prod.stock_quantity is None or float(prod.stock_quantity) < qty:
+            # Проверяем остаток (qty в граммах)
+            if prod.qty is None or int(prod.qty) < int(qty):
                 raise ValueError(f"Недостаточно остатков для товара id={product_id}")
 
-            # Цена
+            # Цена за единицу (за 1 товар/упаковку; итог считается как price * qty)
             price = await self._product_repo.get_price_for_product(product_id)
             if price is None:
                 raise ValueError(f"Нет актуальной цены для товара id={product_id}")
@@ -72,12 +73,12 @@ class OrderRepository(BaseRepository):
         # Создаём позиции и резервируем товар
         for product_id, qty in items:
             price = await self._product_repo.get_price_for_product(product_id)
-            item = OrderItem(order_id=order.id, product_id=product_id, quantity=qty, price=price)  # type: ignore[arg-type]
+            item = OrderItem(order_id=order.id, product_id=product_id, quantity=int(qty), price=price)  # type: ignore[arg-type]
             self.session.add(item)
 
-            # Резервирование — уменьшаем остаток
+            # Резервирование — уменьшаем остаток (целые граммы)
             prod = product_cache[product_id]
-            prod.stock_quantity = float(prod.stock_quantity) - float(qty)  # type: ignore[assignment]
+            prod.qty = int(prod.qty) - int(qty)  # type: ignore[assignment]
 
         await self.session.flush()
         return order
