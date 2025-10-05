@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     """Глобальные настройки приложения."""
 
     # Общие
-    app_host: str = "0.0.0.0"
+    app_host: str = "127.0.0.1"
     app_port: int = 8000
     app_env: str = "dev"
 
