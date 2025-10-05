@@ -1,79 +1,87 @@
-"""Alembic env для асинхронной SQLAlchemy.
-
-Поддерживает автогенерацию миграций, используя Base.metadata из приложения.
-"""
-from __future__ import annotations
-
-import asyncio
 from logging.config import fileConfig
+import os
+import asyncio
 
 from sqlalchemy import pool
-from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import AsyncEngine, async_engine_from_config
+from sqlalchemy.ext.asyncio import async_engine_from_config, AsyncEngine
 
 from alembic import context
 
-# Конфигурация Alembic из alembic.ini
+# this is the Alembic Config object, which provides
+# access to the values within the .ini file in use.
 config = context.config
 
-# Интерпретация логгинга из файла конфигурации.
+# Interpret the config file for Python logging.
+# This line sets up loggers basically.
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Импортируем метаданные моделей приложения
-from app.core.db import Base  # noqa: E402
-import app.models  # noqa: F401, E402  # регистрирует таблицы в метаданных
+# add your model's MetaData object here
+# for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
+from app.core.config import settings
+from app.core.db import Base
+import app.models  # noqa: F401 - импорт нужен для регистрации моделей в метаданных
 
+# Устанавливаем URL к БД из окружения или настроек приложения
+db_url = os.getenv("DATABASE_URL") or settings.database_url
+if not db_url:
+    raise RuntimeError("DATABASE_URL не задан. Укажите DATABASE_URL в .env или settings.database_url.")
+
+config.set_main_option("sqlalchemy.url", db_url)
+
+# Метаданные для автогенерации
 target_metadata = Base.metadata
 
-
-def get_url() -> str:
-    # Предпочитаем URL из переменных окружения приложения, если доступно
-    try:
-        from app.core.config import settings
-
-        return settings.database_url
-    except Exception:
-        return config.get_main_option("sqlalchemy.url")
+# other values from the config, defined by the needs of env.py,
+# can be acquired:
+# my_important_option = config.get_main_option("my_important_option")
+# ... etc.
 
 
 def run_migrations_offline() -> None:
-    """Запуск миграций в offline‑режиме.
+    """Run migrations in 'offline' mode.
 
-    Использует URL соединения без подключения к БД.
+    This configures the context with just a URL
+    and not an Engine, though an Engine is acceptable
+    here as well.  By skipping the Engine creation
+    we don't even need a DBAPI to be available.
+
+    Calls to context.execute() here emit the given string to the
+    script output.
+
     """
-    url = get_url()
+    url = config.get_main_option("sqlalchemy.url")
     context.configure(
         url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        compare_type=True,
     )
-
-    with context.begin_transaction():
-        context.run_migrations()
-
-
-def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
 
     with context.begin_transaction():
         context.run_migrations()
 
 
 async def run_migrations_online() -> None:
-    """Запуск миграций в online‑режиме с async‑движком."""
-    configuration = config.get_section(config.config_ini_section) or {}
-    configuration["sqlalchemy.url"] = get_url()
+    """Run migrations in 'online' mode.
 
+    In this scenario we need to create an Async Engine
+    and associate a connection with the context.
+    """
     connectable: AsyncEngine = async_engine_from_config(
-        configuration,
+        config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
 
     async with connectable.connect() as connection:
+        def do_run_migrations(sync_connection):
+            context.configure(connection=sync_connection, target_metadata=target_metadata)
+            with context.begin_transaction():
+                context.run_migrations()
+
         await connection.run_sync(do_run_migrations)
 
     await connectable.dispose()

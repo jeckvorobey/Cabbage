@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 
 from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
 
 from app.core.config import settings
 from app.telegram.handlers.start import router as start_router
@@ -16,7 +17,10 @@ async def main() -> None:
     if not settings.telegram_bot_token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN не задан в окружении")
 
-    bot = Bot(settings.telegram_bot_token)
+    bot = Bot(
+        settings.telegram_bot_token,
+        default=DefaultBotProperties(parse_mode="HTML")
+    )
     dp = Dispatcher()
 
     # Роуты бота

@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Header, HTTPException, Request
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
+from aiogram.client.default import DefaultBotProperties
 
 from app.api.routers import health as health_router
 from app.api.routers import orders as orders_router
@@ -33,7 +34,10 @@ async def lifespan(app: FastAPI):
     dp: Dispatcher | None = None
 
     if settings.telegram_bot_token:
-        bot = Bot(settings.telegram_bot_token, parse_mode="HTML")
+        bot = Bot(
+            settings.telegram_bot_token,
+            default=DefaultBotProperties(parse_mode="HTML")
+        )
         dp = Dispatcher()
         dp.include_router(start_router)
 
