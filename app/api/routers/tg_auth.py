@@ -35,6 +35,16 @@ class AuthResponse(BaseModel):
 
 
 def _hmac_sha256(key: bytes, msg: bytes) -> bytes:
+    """
+    Вычисляет HMAC-SHA256 хэш сообщения с использованием заданного ключа.
+
+    Args:
+        key (bytes): Секретный ключ для генерации HMAC.
+        msg (bytes): Сообщение, которое нужно аутентифицировать.
+
+    Returns:
+        bytes: HMAC-SHA256 хэш сообщения.
+    """
     return hmac.new(key, msg, hashlib.sha256).digest()
 
 
