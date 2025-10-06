@@ -1,0 +1,191 @@
+<template>
+  <q-layout view="lHh Lpr lFf">
+    <q-header elevated>
+      <q-toolbar class="bg-secondary">
+        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
+
+        <q-toolbar-title>
+          <div v-if="!showSearch">Shop</div>
+          <div v-else>
+            <q-input dense dark borderless rounded outlined v-model="textSearch">
+              <template v-slot:append>
+                <q-icon name="clear" @click="showSearch = !showSearch" />
+              </template>
+            </q-input>
+          </div>
+        </q-toolbar-title>
+
+        <q-btn
+          class="q-mr-md"
+          flat
+          dense
+          round
+          icon="search"
+          aria-label="search"
+          @click="showSearch = !showSearch"
+        />
+        <q-btn
+          flat
+          dense
+          round
+          icon="shopping_cart_checkout"
+          aria-label="cart"
+          @click="drawerRight = !drawerRight"
+        />
+        <div></div>
+      </q-toolbar>
+    </q-header>
+
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
+      <q-list>
+        <q-item-label header>
+          <div class="row justify-between">
+            <div class="text-h6">Меню</div>
+            <div>
+              <q-btn-toggle
+                v-model="themeData"
+                size="sm"
+                no-caps
+                unelevated
+                dense
+                toggle-color="grey-9"
+                color="white"
+                text-color="grey-9"
+                :options="[
+                  { value: 'dark', slot: 'dark', title: 'Dark mode' },
+                  { value: 'light', slot: 'light', title: 'Light mode' },
+                ]"
+                @click="themeToggle()"
+              >
+                <template v-slot:dark>
+                  <div class="items-center">
+                    <q-icon name="nightlight" />
+                  </div>
+                </template>
+
+                <template v-slot:light>
+                  <div class="items-center">
+                    <q-icon name="light_mode" />
+                  </div>
+                </template>
+              </q-btn-toggle>
+            </div>
+          </div>
+        </q-item-label>
+
+        <MenuItems v-for="link in menuList" :key="link.title" v-bind="link" />
+      </q-list>
+    </q-drawer>
+
+    <q-drawer side="right" v-model="drawerRight" show-if-above bordered>
+      <q-list>
+        <q-item-label class="text-h6" header>Kорзина</q-item-label>
+        <BasketItems />
+      </q-list>
+    </q-drawer>
+
+    <q-page-container>
+      <router-view />
+    </q-page-container>
+  </q-layout>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref, shallowReactive } from 'vue';
+import MenuItems, { type IMenuItems } from 'components/MenuItems.vue';
+import BasketItems from 'components/BasketItems.vue';
+import { Dark, useQuasar } from 'quasar';
+import { useAuthStore } from 'src/stores/authStore';
+
+Dark.set(false);
+const $q = useQuasar();
+const authStore = useAuthStore();
+type Theme = 'dark' | 'light';
+const themeData = ref('dark');
+const showSearch = ref(false);
+const textSearch = ref();
+const leftDrawerOpen = ref(false);
+const drawerRight = ref(false);
+const themeState = shallowReactive<Record<Theme, Theme>>({
+  dark: 'dark',
+  light: 'light',
+});
+const isDark = computed(() => Dark.isActive);
+const themeStatus = computed(() => (isDark.value ? themeState.dark : themeState.light));
+const themeToggle = () => {
+  Dark.toggle();
+  window.localStorage.setItem('theme', themeStatus.value);
+};
+
+const tgUser = ref();
+
+const menuList: IMenuItems[] = [
+  {
+    title: 'Главная',
+    icon: 'local_shipping',
+    path: '/',
+  },
+  {
+    title: 'Каталог',
+    icon: 'reorder',
+    path: '',
+    children: [
+      {
+        title: 'Овощи',
+        icon: 'play_arrow',
+        path: '',
+      },
+      {
+        title: 'Фрукты',
+        icon: 'play_arrow',
+        path: '',
+      },
+      {
+        title: 'Хлеб',
+        icon: 'play_arrow',
+        path: '',
+      },
+    ],
+  },
+  {
+    title: 'Доставка и оплата',
+    icon: 'local_shipping',
+    path: '',
+  },
+  {
+    title: 'История заказов',
+    icon: 'history',
+    path: 'history',
+  },
+  {
+    title: 'Мой кабинет',
+    icon: 'perm_identity',
+    path: 'user',
+  },
+  {
+    title: 'Пользователи',
+    icon: 'people',
+    path: 'users',
+  },
+];
+
+onMounted(() => {
+  tgUser.value = window?.Telegram?.WebApp?.initData;
+  getUser();
+});
+
+async function getUser() {
+  try {
+    await authStore.auth(tgUser.value);
+    $q.loading.show();
+  } catch (e: any) {
+    console.error(e);
+  } finally {
+    $q.loading.hide();
+  }
+}
+
+function toggleLeftDrawer() {
+  leftDrawerOpen.value = !leftDrawerOpen.value;
+}
+</script>
