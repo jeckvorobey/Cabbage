@@ -64,6 +64,12 @@ class Settings(BaseSettings):
         webhook_secret=None,
     )
 
+    # Локальное хранилище медиа
+    media_root: str = "./media"
+    media_url_prefix: str = "/media"
+    max_upload_size_mb: int = 5
+    allowed_image_extensions: list[str] = [".jpg", ".jpeg", ".png", ".webp"]
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", env_nested_delimiter="__")
 
 

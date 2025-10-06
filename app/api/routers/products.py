@@ -1,14 +1,15 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import require_role_at_most, get_db_session
 from app.models.user import UserRole
 from app.models.catalog import Product
-from app.schemas.product import ProductIn, ProductUpdate
+from app.schemas.product import ProductIn, ProductUpdate, ProductImageOut
 from app.repositories.product_repository import ProductRepository
+from app.services.product_service import ProductService
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -51,3 +52,52 @@ async def set_price(product_id: int, body: PriceIn, session: AsyncSession = Depe
     await repo.set_current_price(product_id, body.price)
     await session.commit()
     return {"ok": True}
+
+
+# --- Изображения товаров ---
+
+@router.post("/{product_id}/images", response_model=ProductImageOut,
+             dependencies=[Depends(require_role_at_most(UserRole.MANAGER))])
+async def upload_product_image(
+    product_id: int,
+    file: UploadFile = File(...),
+    is_primary: bool = False,
+    session: AsyncSession = Depends(get_db_session),
+):
+    service = ProductService(session)
+    return await service.upload_product_image(product_id, file, is_primary)
+
+
+@router.get("/{product_id}/images", response_model=list[ProductImageOut])
+async def list_product_images(
+    product_id: int,
+    session: AsyncSession = Depends(get_db_session),
+):
+    service = ProductService(session)
+    return await service.list_product_images(product_id)
+
+
+@router.patch("/images/{image_id}/set-primary", response_model=ProductImageOut,
+              dependencies=[Depends(require_role_at_most(UserRole.MANAGER))])
+async def set_primary_image(
+    image_id: int,
+    session: AsyncSession = Depends(get_db_session),
+):
+    service = ProductService(session)
+    try:
+        return await service.set_primary_image(image_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@router.delete("/images/{image_id}", status_code=204,
+               dependencies=[Depends(require_role_at_most(UserRole.MANAGER))])
+async def delete_product_image(
+    image_id: int,
+    session: AsyncSession = Depends(get_db_session),
+):
+    service = ProductService(session)
+    try:
+        await service.delete_product_image(image_id)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))

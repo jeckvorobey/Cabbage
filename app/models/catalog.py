@@ -1,4 +1,4 @@
-"""Модели каталога товаров: категории, единицы, продукты, цены."""
+"""Модели каталога товаров: категории, единицы, продукты, цены, изображения."""
 from __future__ import annotations
 
 from datetime import datetime
@@ -44,13 +44,32 @@ class Product(Base):
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
     origin_country: Mapped[str | None] = mapped_column(String(120), default=None)
     unit_id: Mapped[int] = mapped_column(ForeignKey("units.id"))
-    image_url: Mapped[str | None] = mapped_column(String(500), default=None)
     description: Mapped[str | None] = mapped_column(Text, default=None)
     qty: Mapped[int] = mapped_column(Integer, default=0)
 
     category: Mapped[Category] = relationship(back_populates="products")
     unit: Mapped[Unit] = relationship(back_populates="products")
     prices: Mapped[list["Price"]] = relationship(back_populates="product", cascade="all, delete-orphan")
+    images: Mapped[list["ProductImage"]] = relationship(
+        back_populates="product",
+        cascade="all, delete-orphan",
+        order_by="ProductImage.sort_order",
+    )
+
+
+class ProductImage(Base):
+    """Изображение товара (локально хранимый файл)."""
+
+    __tablename__ = "product_images"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+    product: Mapped["Product"] = relationship(back_populates="images")
 
 
 class Price(Base):

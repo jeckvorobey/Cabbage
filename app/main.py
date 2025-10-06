@@ -11,6 +11,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException, Request
+from fastapi.staticfiles import StaticFiles
+from pathlib import Path
 from aiogram import Bot, Dispatcher
 from aiogram.types import Update
 from aiogram.client.default import DefaultBotProperties
@@ -111,6 +113,11 @@ app = FastAPI(title="Овощной магазин", version="0.1.0", lifespan=l
 
 # Middleware для логирования запросов
 app.middleware("http")(log_requests_middleware)
+
+# Раздача локальных медиа-файлов
+media_path = Path(settings.media_root)
+media_path.mkdir(parents=True, exist_ok=True)
+app.mount(settings.media_url_prefix, StaticFiles(directory=str(media_path)), name="media")
 
 # Подключение REST-роутеров
 app.include_router(health_router.router)

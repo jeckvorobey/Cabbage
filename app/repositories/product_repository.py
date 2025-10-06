@@ -7,7 +7,7 @@ from sqlalchemy import Select, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased
 
-from app.models.catalog import Price, Product, Unit, Category
+from app.models.catalog import Price, Product, Unit, Category, ProductImage
 from .base import BaseRepository
 
 
@@ -21,6 +21,7 @@ class ProductRepository(BaseRepository):
         p = aliased(Product)
         pr = aliased(Price)
         u = aliased(Unit)
+        img = aliased(ProductImage)
         return (
             select(
                 p.id,
@@ -30,9 +31,11 @@ class ProductRepository(BaseRepository):
                 pr.price.label("price"),
                 pr.old_price.label("old_price"),
                 p.qty,
+                img.file_path.label("primary_image"),
             )
             .join(pr, pr.product_id == p.id)
             .join(u, u.id == p.unit_id)
+            .outerjoin(img, (img.product_id == p.id) & (img.is_primary.is_(True)))
             .where(pr.is_current.is_(True))
             .order_by(p.id)
         )
