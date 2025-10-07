@@ -1,8 +1,8 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
-import { defineConfig } from '#q-app/wrappers';
-import { fileURLToPath } from 'node:url';
+import {defineConfig} from '#q-app/wrappers';
+import {fileURLToPath} from 'node:url';
 
 export default defineConfig((ctx) => {
   return {
@@ -90,15 +90,16 @@ export default defineConfig((ctx) => {
               useFlatConfig: true,
             },
           },
-          { server: false },
+          {server: false},
         ],
       ],
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
     devServer: {
-      // https: true,
+      https: true,
       open: false, // opens browser window automatically
+      allowedHosts: true,
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework
