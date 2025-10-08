@@ -176,8 +176,8 @@ onMounted(() => {
 
 async function getUser() {
   try {
-    await authStore.auth(tgUser.value);
     $q.loading.show();
+    await authStore.auth(tgUser.value);
   } catch (e: any) {
     console.error(e);
   } finally {

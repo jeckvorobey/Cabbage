@@ -1,7 +1,7 @@
 <template>
   <div class="basket">
-    <q-card v-if="basketData?.length" class="my-card q-ma-sm" flat bordered>
-      <q-list v-for="(item, index) in basketData" :key="index">
+    <q-card v-if="prderStore.basketData?.length" class="my-card q-ma-sm" flat bordered>
+      <q-list v-for="(item, index) in prderStore.basketData" :key="index">
         <q-item class="q-px-xs">
           <q-item-section avatar>
             <q-img
@@ -13,7 +13,7 @@
           <q-item-section>
             <q-item-label>
               <span class="q-mr-md">{{ item.name }}</span>
-              <span>{{ item.weight }}</span>
+              <span>{{ item.weight }}кг</span>
             </q-item-label>
             <q-item-label caption>
               <span class="text-bold text-black">{{ item.price }}</span> ₽
@@ -32,20 +32,21 @@
 </template>
 
 <script setup lang="ts">
-import { useQuasar } from 'quasar';
-import { onMounted, ref } from 'vue';
+import { useOrderStore } from 'src/stores/orderStore';
 
-const $q = useQuasar();
-const basketData = ref<any>([]);
+// const $q = useQuasar();
+const prderStore = useOrderStore();
+// const basketData = ref<any>([]);
 
-onMounted(() => {
-  basketData.value = $q.localStorage.getItem('basket');
-});
+// onMounted(() => {
+//   basketData.value = $q.localStorage.getItem('basket');
+// });
 
 function removeItem(it: any) {
-  const order = basketData.value.filter((item: { price: any }) => item.price !== it.price);
-  basketData.value = order;
-  $q.localStorage.set('basket', basketData.value);
+  const order = prderStore.basketData.filter((item: { id: number }) => item.id !== it.id);
+  // const order = basketData.value.filter((item: { id: number }) => item.id !== it.id);
+  prderStore.basketData = order;
+  // $q.localStorage.set('basket', basketData.value);
 }
 </script>
 

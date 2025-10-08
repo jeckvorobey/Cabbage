@@ -1,5 +1,12 @@
 <template>
-  <q-item v-if="!children" clickable tag="a" target="_blank" @click="router.push(path)">
+  <q-item
+    v-if="!children"
+    clickable
+    tag="a"
+    target="_blank"
+    @click="router.push(path)"
+    :class="path === route.name ? 'active-menu-item' : ''"
+  >
     <q-item-section v-if="icon" avatar>
       <q-icon :name="icon" />
     </q-item-section>
@@ -20,7 +27,9 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+
+const route = useRoute();
 
 export interface IMenuItems {
   title: string;
@@ -35,3 +44,9 @@ withDefaults(defineProps<IMenuItems>(), {
 });
 const router = useRouter();
 </script>
+
+<style scoped lang="scss">
+.active-menu-item {
+  background-color: #8080802b;
+}
+</style>

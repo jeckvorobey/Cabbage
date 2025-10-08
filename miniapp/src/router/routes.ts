@@ -5,10 +5,10 @@ const routes: RouteRecordRaw[] = [
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: '', component: () => import('pages/DashboardPage.vue') },
-      { path: '/user', component: () => import('pages/UserPage.vue') },
-      { path: '/users', component: () => import('pages/UsersPage.vue') },
-      { path: '/history', component: () => import('pages/OrderHistoryPage.vue') },
+      { path: '', name: '/', component: () => import('pages/DashboardPage.vue') },
+      { path: '/user', name: 'user', component: () => import('pages/UserPage.vue') },
+      { path: '/users', name: 'users', component: () => import('pages/UsersPage.vue') },
+      { path: '/history', name: 'history', component: () => import('pages/OrderHistoryPage.vue') },
     ],
   },
 

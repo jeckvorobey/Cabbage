@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia';
 import { client } from 'src/boot/axios';
+import { ref } from 'vue';
 
 export const useOrderStore = defineStore('Order', () => {
+  const basketData = ref<any>([]);
+
   async function createOrder(order: any) {
     return client
       .post<any>('order', order)
@@ -12,5 +15,5 @@ export const useOrderStore = defineStore('Order', () => {
       });
   }
 
-  return { createOrder };
+  return { basketData, createOrder };
 });

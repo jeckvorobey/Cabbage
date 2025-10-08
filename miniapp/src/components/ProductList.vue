@@ -52,16 +52,42 @@
 
 <script setup lang="ts">
 import { useProductsStore } from 'stores/productsStore.js';
+import { useOrderStore } from 'src/stores/orderStore';
+import { toRaw } from 'vue';
 import { useQuasar } from 'quasar';
-import { ref } from 'vue';
 
 const $q = useQuasar();
 const productsStore = useProductsStore();
-const basketData = ref<any>([]);
+const prderStore = useOrderStore();
 
 function addOrder(it: any) {
-  basketData.value.push(it);
-  $q.localStorage.set('basket', basketData.value);
+  try {
+    $q.loading.show();
+    if (prderStore.basketData?.length) {
+      const coincidences = prderStore.basketData.find((item: any) => item.id === it.id);
+      if (coincidences) {
+        recalculationGoods(coincidences, it);
+      } else {
+        prderStore.basketData.push(structuredClone(toRaw(it)));
+      }
+    } else {
+      prderStore.basketData.push(structuredClone(toRaw(it)));
+    }
+  } catch (e) {
+    console.error(e);
+  } finally {
+    $q.notify({
+      message: `Товар ${it.name} добавлен в корзину`,
+      color: 'primary',
+    });
+    $q.loading.hide();
+  }
+}
+
+function recalculationGoods(newGoods: any, oldGoods: any) {
+  if (newGoods.price) newGoods.price += oldGoods.price;
+  if (newGoods.weight) newGoods.weight += oldGoods.weight;
+  if (newGoods.oldPrice) newGoods.oldPrice += oldGoods.oldPrice;
 }
 </script>
 
