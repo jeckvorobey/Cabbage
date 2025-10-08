@@ -1,7 +1,7 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
-      <q-toolbar class="bg-secondary">
+      <q-toolbar class="bg-header">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
         <q-toolbar-title>
@@ -96,6 +96,7 @@ import MenuItems, { type IMenuItems } from 'components/MenuItems.vue';
 import BasketItems from 'components/BasketItems.vue';
 import { Dark, useQuasar } from 'quasar';
 import { useAuthStore } from 'src/stores/authStore';
+import { admin, maneger, accessLevel } from 'src/use/useUtils';
 
 Dark.set(false);
 const $q = useQuasar();
@@ -122,50 +123,68 @@ const tgUser = ref();
 const menuList: IMenuItems[] = [
   {
     title: 'Главная',
-    icon: 'local_shipping',
+    icon: 'home',
+    name: '/',
     path: '/',
+  },
+  {
+    title: 'Добавить категорию',
+    icon: 'home',
+    name: '',
+    action: 'add-category',
+    disabled: !admin.value || !maneger.value,
   },
   {
     title: 'Каталог',
     icon: 'reorder',
-    path: '',
     children: [
       {
+        category_id: 1,
         title: 'Овощи',
         icon: 'play_arrow',
-        path: '',
+        name: '',
+        path: '/',
       },
       {
+        category_id: 2,
         title: 'Фрукты',
         icon: 'play_arrow',
-        path: '',
+        name: '',
+        path: '/',
       },
       {
+        category_id: 3,
         title: 'Хлеб',
         icon: 'play_arrow',
-        path: '',
+        name: '',
+        path: '/',
       },
     ],
   },
   {
     title: 'Доставка и оплата',
     icon: 'local_shipping',
+    name: '',
     path: '',
   },
   {
     title: 'История заказов',
     icon: 'history',
+    name: 'history',
     path: 'history',
   },
   {
     title: 'Мой кабинет',
     icon: 'perm_identity',
+    name: 'user',
     path: 'user',
   },
   {
     title: 'Пользователи',
     icon: 'people',
+    name: 'users',
     path: 'users',
+    disabled: !admin.value,
   },
 ];
 
@@ -177,7 +196,8 @@ onMounted(() => {
 async function getUser() {
   try {
     $q.loading.show();
-    await authStore.auth(tgUser.value);
+    const data = await authStore.auth(tgUser.value);
+    accessLevel(data);
   } catch (e: any) {
     console.error(e);
   } finally {

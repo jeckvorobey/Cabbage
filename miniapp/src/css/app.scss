@@ -1,1 +1,11 @@
-// app global css in SCSS form
+body.body--light {
+  --subtitle-text: #26a69a;
+}
+
+body.body--dark {
+  --subtitle-text: #152229;
+}
+
+.bg-header {
+  background-color: var(--subtitle-text);
+}

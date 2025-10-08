@@ -53,25 +53,37 @@
 <script setup lang="ts">
 import { useProductsStore } from 'stores/productsStore.js';
 import { useOrderStore } from 'src/stores/orderStore';
-import { toRaw } from 'vue';
+import { onMounted, toRaw } from 'vue';
 import { useQuasar } from 'quasar';
 
 const $q = useQuasar();
 const productsStore = useProductsStore();
-const prderStore = useOrderStore();
+const orderStore = useOrderStore();
+
+onMounted(async () => {
+  try {
+    $q.loading.show();
+    const res = await productsStore.fetchProducts();
+    if (res) productsStore.products = res;
+  } catch (e) {
+    console.error(e);
+  } finally {
+    $q.loading.hide();
+  }
+});
 
 function addOrder(it: any) {
   try {
     $q.loading.show();
-    if (prderStore.basketData?.length) {
-      const coincidences = prderStore.basketData.find((item: any) => item.id === it.id);
+    if (orderStore.basketData?.length) {
+      const coincidences = orderStore.basketData.find((item: any) => item.id === it.id);
       if (coincidences) {
         recalculationGoods(coincidences, it);
       } else {
-        prderStore.basketData.push(structuredClone(toRaw(it)));
+        orderStore.basketData.push(structuredClone(toRaw(it)));
       }
     } else {
-      prderStore.basketData.push(structuredClone(toRaw(it)));
+      orderStore.basketData.push(structuredClone(toRaw(it)));
     }
   } catch (e) {
     console.error(e);
